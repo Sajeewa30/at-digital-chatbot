@@ -543,6 +543,23 @@ export default function Chatbot({ config: userConfig }) {
         }
       : null),
   };
+  const heroStyle = isMobile
+    ? {
+        padding: "6px 8px",
+        borderRadius: 10,
+      }
+    : undefined;
+  const heroTitleStyle = isMobile
+    ? {
+        fontSize: 13,
+        marginBottom: 2,
+      }
+    : undefined;
+  const heroSubtitleStyle = isMobile
+    ? {
+        fontSize: 11,
+      }
+    : undefined;
 
   const brandName = (config.branding.name || "AT Digital").trim() || "AT Digital";
   const heroSubtext = `Ask anything about ${brandName}'s services, strategy, or support.`;
@@ -608,9 +625,13 @@ export default function Chatbot({ config: userConfig }) {
               </svg>
             </button>
           </div>
-          <div className="hero-copy">
-            <p className="hero-title">{config.branding.welcomeText}</p>
-            <p className="hero-subtitle">{heroSubtext}</p>
+          <div className="hero-copy" style={heroStyle}>
+            <p className="hero-title" style={heroTitleStyle}>
+              {config.branding.welcomeText}
+            </p>
+            <p className="hero-subtitle" style={heroSubtitleStyle}>
+              {heroSubtext}
+            </p>
           </div>
           <div className="chat-messages" ref={messagesRef}>
             {messages.map((m, i) => {
