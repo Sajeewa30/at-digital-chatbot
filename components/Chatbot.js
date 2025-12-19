@@ -149,6 +149,7 @@ export default function Chatbot({ config: userConfig }) {
   const [sending, setSending] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [debug, setDebug] = useState({ w: 0, mq: false, dpr: 1 });
   // CTAs persist per message; no global active gating
   // Typing speed for bot replies (milliseconds per character)
   // Adjust via `config.typingSpeedMs` when using the component.
@@ -201,6 +202,25 @@ export default function Chatbot({ config: userConfig }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const mql = window.matchMedia("(max-width: 640px)");
+    const update = () => {
+      setDebug({
+        w: window.innerWidth,
+        mq: mql.matches,
+        dpr: window.devicePixelRatio || 1,
+      });
+    };
+    update();
+    mql.addEventListener("change", update);
+    window.addEventListener("resize", update);
+    return () => {
+      mql.removeEventListener("change", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [mounted]);
 
   // Clear any running typing interval on unmount
   useEffect(() => {
@@ -511,6 +531,8 @@ export default function Chatbot({ config: userConfig }) {
 
   if (!mounted) return null;
 
+  const showDebug = true;
+
   const brandName = (config.branding.name || "AT Digital").trim() || "AT Digital";
   const heroSubtext = `Ask anything about ${brandName}'s services, strategy, or support.`;
   const quickReplyOptions = [
@@ -736,6 +758,12 @@ export default function Chatbot({ config: userConfig }) {
           <path d="M4 3h16a2 2 0 0 1 2 2v13.764a1 1 0 0 1-1.553.833l-4.894-3.263H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
         </svg>
       </button>
+
+      {showDebug && (
+        <div className="debug-badge" aria-hidden="true">
+          w:{debug.w}px mq:{debug.mq ? "1" : "0"} dpr:{debug.dpr}
+        </div>
+      )}
 
       {/* Styles ported from the original widget */}
       <style jsx>{`
@@ -1089,6 +1117,19 @@ export default function Chatbot({ config: userConfig }) {
           color: rgba(170, 173, 255, 0.95);
           text-decoration: none;
           font-weight: 500;
+        }
+
+        .debug-badge {
+          position: fixed;
+          top: 8px;
+          left: 8px;
+          background: rgba(0, 0, 0, 0.7);
+          color: #fff;
+          font-size: 11px;
+          padding: 4px 6px;
+          border-radius: 6px;
+          z-index: 2000;
+          pointer-events: none;
         }
 
         @media (max-width: 640px) {
