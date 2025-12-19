@@ -1153,17 +1153,17 @@ export default function Chatbot({ config: userConfig }) {
           }
 
           .hero-copy {
-            padding: 8px 10px;
-            border-radius: 12px;
+            padding: 6px 8px;
+            border-radius: 10px;
           }
 
           .hero-title {
-            font-size: 14px;
-            margin-bottom: 4px;
+            font-size: 13px;
+            margin-bottom: 2px;
           }
 
           .hero-subtitle {
-            font-size: 12px;
+            font-size: 11px;
           }
 
           .chat-toggle {
