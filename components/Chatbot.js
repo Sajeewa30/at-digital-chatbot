@@ -149,6 +149,7 @@ export default function Chatbot({ config: userConfig }) {
   const [sending, setSending] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [debug, setDebug] = useState({
     w: 0,
     mq: false,
@@ -216,6 +217,7 @@ export default function Chatbot({ config: userConfig }) {
     if (!mounted) return;
     const mql = window.matchMedia("(max-width: 640px)");
     const update = () => {
+      setIsMobile(mql.matches);
       let rect = null;
       let top = "";
       let left = "";
@@ -559,6 +561,24 @@ export default function Chatbot({ config: userConfig }) {
   if (!mounted) return null;
 
   const showDebug = true;
+  const containerStyle = {
+    display: open ? "flex" : "none",
+    ...(isMobile
+      ? {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          maxWidth: "100vw",
+          maxHeight: "100dvh",
+          borderRadius: 0,
+          boxShadow: "none",
+          overflowY: "auto",
+        }
+      : null),
+  };
 
   const brandName = (config.branding.name || "AT Digital").trim() || "AT Digital";
   const heroSubtext = `Ask anything about ${brandName}'s services, strategy, or support.`;
@@ -591,7 +611,7 @@ export default function Chatbot({ config: userConfig }) {
       <div
         className={`chat-container${open ? " open" : ""}${positionLeft ? " position-left" : ""}`}
         ref={containerRef}
-        style={{ display: open ? "flex" : "none" }}
+        style={containerStyle}
       >
         <div className="chat-shell">
           <div className="chat-hero">
