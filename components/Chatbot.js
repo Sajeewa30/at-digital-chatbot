@@ -1134,15 +1134,16 @@ export default function Chatbot({ config: userConfig }) {
 
         @media (max-width: 640px) {
           .chat-container {
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100vw;
-            height: 100dvh;
+            inset: 0;
+            margin: 0;
+            width: 100%;
+            max-width: 100vw;
+            height: 100%;
+            max-height: 100dvh;
             border-radius: 0;
             box-shadow: none;
             overflow-y: auto;
+            transform: none;
           }
 
           .chat-container.position-left {
