@@ -816,7 +816,7 @@ export default function Chatbot({ config: userConfig }) {
           background: radial-gradient(circle at top right, rgba(124, 110, 255, 0.35), transparent 40%), var(--chat-surface);
           border: 1px solid var(--chat-border);
           box-shadow: 0 25px 70px rgba(6, 7, 29, 0.8);
-          overflow: hidden;
+          overflow-y: auto;
           display: none;
           z-index: 1000;
         }
@@ -838,6 +838,7 @@ export default function Chatbot({ config: userConfig }) {
           gap: 16px;
           background: rgba(8, 12, 30, 0.65);
           backdrop-filter: blur(18px);
+          min-height: 100%;
         }
 
         .chat-hero {
