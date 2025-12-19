@@ -149,7 +149,16 @@ export default function Chatbot({ config: userConfig }) {
   const [sending, setSending] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [debug, setDebug] = useState({ w: 0, mq: false, dpr: 1 });
+  const [debug, setDebug] = useState({
+    w: 0,
+    mq: false,
+    dpr: 1,
+    rect: null,
+    top: "",
+    left: "",
+    width: "",
+    height: "",
+  });
   // CTAs persist per message; no global active gating
   // Typing speed for bot replies (milliseconds per character)
   // Adjust via `config.typingSpeedMs` when using the component.
@@ -207,10 +216,28 @@ export default function Chatbot({ config: userConfig }) {
     if (!mounted) return;
     const mql = window.matchMedia("(max-width: 640px)");
     const update = () => {
+      let rect = null;
+      let top = "";
+      let left = "";
+      let width = "";
+      let height = "";
+      if (open && containerRef.current) {
+        rect = containerRef.current.getBoundingClientRect();
+        const cs = window.getComputedStyle(containerRef.current);
+        top = cs.top;
+        left = cs.left;
+        width = cs.width;
+        height = cs.height;
+      }
       setDebug({
         w: window.innerWidth,
         mq: mql.matches,
         dpr: window.devicePixelRatio || 1,
+        rect,
+        top,
+        left,
+        width,
+        height,
       });
     };
     update();
@@ -220,7 +247,7 @@ export default function Chatbot({ config: userConfig }) {
       mql.removeEventListener("change", update);
       window.removeEventListener("resize", update);
     };
-  }, [mounted]);
+  }, [mounted, open]);
 
   // Clear any running typing interval on unmount
   useEffect(() => {
@@ -761,7 +788,17 @@ export default function Chatbot({ config: userConfig }) {
 
       {showDebug && (
         <div className="debug-badge" aria-hidden="true">
-          w:{debug.w}px mq:{debug.mq ? "1" : "0"} dpr:{debug.dpr}
+          <div>w:{debug.w}px mq:{debug.mq ? "1" : "0"} dpr:{debug.dpr}</div>
+          {debug.rect && (
+            <div>
+              rect:{Math.round(debug.rect.left)},{Math.round(debug.rect.top)} {Math.round(debug.rect.width)}x{Math.round(debug.rect.height)}
+            </div>
+          )}
+          {debug.rect && (
+            <div>
+              css:{debug.left},{debug.top} {debug.width}x{debug.height}
+            </div>
+          )}
         </div>
       )}
 
@@ -1130,6 +1167,7 @@ export default function Chatbot({ config: userConfig }) {
           border-radius: 6px;
           z-index: 2000;
           pointer-events: none;
+          line-height: 1.3;
         }
 
         @media (max-width: 640px) {
