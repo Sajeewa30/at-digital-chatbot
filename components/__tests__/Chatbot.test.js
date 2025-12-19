@@ -16,11 +16,11 @@ const baseConfig = {
     },
   },
   style: {
-    primaryColor: "#E0282A",
-    secondaryColor: "#E0282A",
+    primaryColor: "#4C46F7",
+    secondaryColor: "#7A5CFF",
     position: "right",
-    backgroundColor: "#ffffff",
-    fontColor: "#000000",
+    backgroundColor: "#0B1025",
+    fontColor: "#E4E7FF",
   },
 };
 
@@ -43,16 +43,14 @@ afterEach(() => {
 });
 
 describe("Chatbot", () => {
-  it("opens the widget and shows the new conversation view", async () => {
+  it("opens the widget and shows the conversational hero", async () => {
     renderChatbot();
     const user = userEvent.setup();
 
     const toggle = await screen.findByLabelText(/open chat/i);
     await user.click(toggle);
 
-    expect(
-      await screen.findByRole("button", { name: /send us a message/i })
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/welcome to at digital/i)).toBeInTheDocument();
   });
 
   it("starts a conversation and types the welcome message", async () => {
@@ -61,10 +59,6 @@ describe("Chatbot", () => {
 
     renderChatbot();
     await user.click(await screen.findByLabelText(/open chat/i));
-    const startButton = await screen.findByRole("button", {
-      name: /send us a message/i,
-    });
-    await user.click(startButton);
 
     await act(async () => {
       jest.runOnlyPendingTimers();
@@ -83,16 +77,11 @@ describe("Chatbot", () => {
 
     renderChatbot();
     await user.click(await screen.findByLabelText(/open chat/i));
-    await user.click(
-      await screen.findByRole("button", { name: /send us a message/i })
-    );
     await act(async () => {
       jest.runOnlyPendingTimers();
     });
 
-    const textarea = await screen.findByPlaceholderText(
-      /type your message here/i
-    );
+    const textarea = await screen.findByPlaceholderText(/ask at digital anything/i);
     await user.type(textarea, "Hello there??");
 
     const sendButton = screen.getByRole("button", { name: /^send$/i });
@@ -118,26 +107,23 @@ describe("Chatbot", () => {
 
     renderChatbot();
     await user.click(await screen.findByLabelText(/open chat/i));
-    await user.click(
-      await screen.findByRole("button", { name: /send us a message/i })
-    );
     await act(async () => {
       jest.runOnlyPendingTimers();
     });
 
     const quickReply = await screen.findByRole("button", {
-      name: "I Want to know about AT Digital",
+      name: `Tell me about AT Digital's services`,
     });
     await user.click(quickReply);
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(payload.chatInput).toBe("I Want to know about AT Digital");
+    expect(payload.chatInput).toBe("Tell me about AT Digital's services");
 
     await waitFor(() => {
       expect(
         screen.queryByRole("button", {
-          name: "I Want to know about AT Digital",
+          name: `Tell me about AT Digital's services`,
         })
       ).not.toBeInTheDocument();
     });

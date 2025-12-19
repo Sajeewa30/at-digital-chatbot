@@ -113,11 +113,11 @@ const defaultConfig = {
     },
   },
   style: {
-    primaryColor: "#854fff",
-    secondaryColor: "#6b3fd4",
+    primaryColor: "#4C46F7",
+    secondaryColor: "#7A5CFF",
     position: "right",
-    backgroundColor: "#ffffff",
-    fontColor: "#333333",
+    backgroundColor: "#0B1025",
+    fontColor: "#E4E7FF",
   },
 };
 
@@ -285,7 +285,10 @@ export default function Chatbot({ config: userConfig }) {
         try {
           const u = new URL(stripTrailingPunct(it.url));
           const host = (u.hostname || "").toLowerCase();
-          const allowedHost = host === "spanmor.com.au" || host.endsWith(".spanmor.com.au");
+          const allowedHost =
+            host === "atdigital.com.au" ||
+            host.endsWith(".atdigital.com.au") ||
+            host.endsWith("atdigital.au");
           const pathDepth = (u.pathname || "/").split("/").filter(Boolean).length;
           if (allowedHost && (u.search || pathDepth > 1)) {
             raw.push(it);
@@ -303,7 +306,10 @@ export default function Chatbot({ config: userConfig }) {
       const cleanedUrl = stripTrailingPunct(it.url);
       const { key, host } = normalizeKey(cleanedUrl);
       if (!key || !host) continue;
-      const allowedHost = host === "spanmor.com.au" || host.endsWith(".spanmor.com.au");
+      const allowedHost =
+        host === "atdigital.com.au" ||
+        host.endsWith(".atdigital.com.au") ||
+        host.endsWith("atdigital.au");
       if (!allowedHost) continue;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -393,6 +399,12 @@ export default function Chatbot({ config: userConfig }) {
     typeOutBotMessage(`Hi there! Welcome to AT Digital.`);
   }, [typeOutBotMessage]);
 
+  useEffect(() => {
+    if (open && !started) {
+      startNewConversation();
+    }
+  }, [open, started, startNewConversation]);
+
   const sendMessage = useCallback(async () => {
     const display = String(input ?? "").trim();
     const message = normalizeInput(input);
@@ -479,166 +491,193 @@ export default function Chatbot({ config: userConfig }) {
 
   if (!mounted) return null;
 
+  const brandName = (config.branding.name || "AT Digital").trim() || "AT Digital";
+  const heroSubtext = `Ask anything about ${brandName}'s services, strategy, or support.`;
+  const quickReplyOptions = [
+    {
+      label: `Tell me about ${brandName}'s services`,
+      send: `Tell me about ${brandName}'s services`,
+    },
+    {
+      label: "I need help crafting my digital strategy",
+      send: "I need help crafting my digital strategy",
+    },
+    {
+      label: `Connect me with an expert at ${brandName}`,
+      send: `Connect me with an expert at ${brandName}`,
+    },
+  ];
+  const showQuickReplies = messages.filter((m) => m.role === "user").length === 0;
+
   return (
     <div
       className="n8n-chat-widget"
       style={{
-        // Expose CSS vars like the original widget
         ["--n8n-chat-primary-color"]: config.style.primaryColor,
         ["--n8n-chat-secondary-color"]: config.style.secondaryColor,
         ["--n8n-chat-background-color"]: config.style.backgroundColor,
         ["--n8n-chat-font-color"]: config.style.fontColor,
       }}
     >
-        <div
-          className={`chat-container${open ? " open" : ""}${positionLeft ? " position-left" : ""}`}
-          ref={containerRef}
-          style={{ display: open ? "flex" : "none" }}
-        >
-        {/* Welcome/new conversation view */}
-        {!started && (
-          <>
-            <div className="brand-header">
+      <div
+        className={`chat-container${open ? " open" : ""}${positionLeft ? " position-left" : ""}`}
+        ref={containerRef}
+        style={{ display: open ? "flex" : "none" }}
+      >
+        <div className="chat-shell">
+          <div className="chat-hero">
+            <div className="brand-cluster">
               {config.branding.logo ? (
-                <img src={config.branding.logo} alt={config.branding.name} />
-              ) : null}
-              <button
-                className="close-button"
-                aria-label="Close"
-                onClick={() => setOpen(false)}
-              />
+                <span className="brand-logo">
+                  <img src={config.branding.logo} alt={brandName} />
+                </span>
+              ) : (
+                <span className="brand-logo placeholder">{brandName.charAt(0)}</span>
+              )}
+              <div className="brand-text">
+                <p className="brand-name">{brandName}</p>
+                <p className="brand-meta">
+                  {config.branding.responseTimeText || "Typically replies instantly"}
+                </p>
+              </div>
             </div>
-            <div className="new-conversation">
-              <h2 className="welcome-text">{config.branding.welcomeText}</h2>
-              <button className="new-chat-btn" onClick={startNewConversation}>
-                <svg
-                  className="message-icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"
-                  />
-                </svg>
-                Send us a message
-              </button>
-              <p className="response-text">{config.branding.responseTimeText}</p>
-            </div>
-          </>
-        )}
+            <button
+              className="close-button"
+              aria-label="Close chat"
+              onClick={() => setOpen(false)}
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" role="presentation">
+                <path
+                  d="M12 10.586 5.757 4.343 4.343 5.757 10.586 12l-6.243 6.243 1.414 1.414L12 13.414l6.243 6.243 1.414-1.414L13.414 12l6.243-6.243-1.414-1.414Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
+          <div className="hero-copy">
+            <p className="hero-title">{config.branding.welcomeText}</p>
+            <p className="hero-subtitle">{heroSubtext}</p>
+          </div>
+          <div className="chat-messages" ref={messagesRef}>
+            {messages.map((m, i) => {
+              const isTypingMsg = Boolean(typingTimerRef.current) && m.id === typingMessageIdRef.current;
+              const isLastBot = i === messages.length - 1 && m.role === "bot";
 
-        {/* Chat interface */}
-        {started && (
-          <div className="chat-interface active">
-            <div className="brand-header">
-              {config.branding.logo ? (
-                <img src={config.branding.logo} alt={config.branding.name} />
-              ) : null}
-              <button
-                className="close-button"
-                aria-label="Close"
-                onClick={() => setOpen(false)}
-              />
-            </div>
-            <div className="chat-messages" ref={messagesRef}>
-              {messages.map((m, i) => {
-                const isTypingMsg = Boolean(typingTimerRef.current) && m.id === typingMessageIdRef.current;
-                const isLastBot = i === messages.length - 1 && m.role === "bot";
-
-                // Build CTA(s) attached to this message (after typing completes)
-                let cta = null;
-                if (
-                  m.role === "bot" &&
-                  Array.isArray(m.links) &&
-                  m.links.length > 0 &&
-                  !isTypingMsg
-                ) {
-                  const createLabel = (lnk) => {
-                    const cleanText = (t) => t
-                      .replace(/[\)\]\}\>\.,!?:;]+$/g, "") // strip trailing punctuation
-                      .replace(/^\s*(the|a|an)\s+/i, "") // drop leading articles
-                      .replace(/\b(page|webpage|site)\b/gi, "") // drop generic words
+              let cta = null;
+              if (
+                m.role === "bot" &&
+                Array.isArray(m.links) &&
+                m.links.length > 0 &&
+                !isTypingMsg
+              ) {
+                const createLabel = (lnk) => {
+                  const cleanText = (t) =>
+                    t
+                      .replace(/[\)\]\}\>\.,!?:;]+$/g, "")
+                      .replace(/^\s*(the|a|an)\s+/i, "")
+                      .replace(/\b(page|webpage|site)\b/gi, "")
                       .replace(/\s{2,}/g, " ")
                       .trim();
 
-                    const raw = cleanText(String(lnk.label || ""));
-                    const looksLikeUrlish = /https?:|:\/\//i.test(raw) || /\//.test(raw) || /\.[a-z]{2,}$/i.test(raw);
-                    if (raw && raw !== lnk.url && !looksLikeUrlish) {
-                      const title = raw.replace(/\b\w/g, (c) => c.toUpperCase());
+                  const raw = cleanText(String(lnk.label || ""));
+                  const looksLikeUrlish =
+                    /https?:|:\/\//i.test(raw) || /\//.test(raw) || /\.[a-z]{2,}$/i.test(raw);
+                  if (raw && raw !== lnk.url && !looksLikeUrlish) {
+                    const title = raw.replace(/\b\w/g, (c) => c.toUpperCase());
+                    return `Open ${title}`;
+                  }
+                  try {
+                    const u = new URL(lnk.url);
+                    const host = (u.hostname || "").replace(/^www\./, "");
+                    const path = u.pathname || "/";
+                    const segs = path.split("/").filter(Boolean);
+                    if (segs.length === 0) {
+                      const site = host.split(".")[0] || host;
+                      const title = site.charAt(0).toUpperCase() + site.slice(1);
                       return `Open ${title}`;
                     }
-                    try {
-                      const u = new URL(lnk.url);
-                      const host = (u.hostname || "").replace(/^www\./, "");
-                      const path = (u.pathname || "/");
-                      const segs = path.split("/").filter(Boolean);
-                      if (segs.length === 0) {
-                        // homepage: use site name from host
-                        const site = host.split(".")[0] || host;
-                        const title = site.charAt(0).toUpperCase() + site.slice(1);
-                        return `Open ${title}`;
-                      }
-                      const last = cleanText(decodeURIComponent(segs[segs.length - 1])
-                        .replace(/[\-_]+/g, " ")
-                        .replace(/\s+/g, " "));
-                      const title = last.replace(/\b\w/g, (c) => c.toUpperCase());
-                      return `Open ${title}`;
-                    } catch (_) {
-                      return "Open Link";
-                    }
-                  };
+                    const last = cleanText(
+                      decodeURIComponent(segs[segs.length - 1]).replace(/[\-_]+/g, " ").replace(/\s+/g, " ")
+                    );
+                    const title = last.replace(/\b\w/g, (c) => c.toUpperCase());
+                    return `Open ${title}`;
+                  } catch (_) {
+                    return "Open Link";
+                  }
+                };
 
-                  cta = (
-                    <div className="message-actions">
-                      {m.links.map((lnk, idx) => (
-                        <button
-                          key={`cta-${m.id || i}-${idx}`}
-                          type="button"
-                          className="link-action"
-                          onClick={() => window.open(lnk.url, "_blank", "noopener,noreferrer")}
-                          aria-label={createLabel(lnk)}
-                          title={lnk.url}
-                        >
-                          {createLabel(lnk)}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                }
-
-                return (
-                  <React.Fragment key={m.id || i}>
-                    <div
-                      className={`chat-message ${m.role}`}
-                      ref={isLastBot ? lastBotRef : null}
-                      style={{ whiteSpace: "pre-wrap" }}
-                    >
-                      {/* While typing: stable, sanitized plain text (no links visible) */}
-                      {isTypingMsg
-                        ? sanitizeTypingDisplay(m.text)
-                        : renderMessageWithLinks(m.text, { isTyping: false })}
-                    </div>
-                    {cta}
-                  </React.Fragment>
+                cta = (
+                  <div className="message-actions">
+                    {m.links.map((lnk, idx) => (
+                      <button
+                        key={`cta-${m.id || i}-${idx}`}
+                        type="button"
+                        className="link-action"
+                        onClick={() => window.open(lnk.url, "_blank", "noopener,noreferrer")}
+                        aria-label={createLabel(lnk)}
+                        title={lnk.url}
+                      >
+                        {createLabel(lnk)}
+                      </button>
+                    ))}
+                  </div>
                 );
-              })}
-              {/* User typing indicator */}
-              {hasFocus && !sending && input && (
-                <div className="chat-message user typing-indicator">
-                  <span className="typing-dots"><span className="dot" /><span className="dot" /><span className="dot" /></span>
-                </div>
-              )}
-              {/* Bot typing indicator while awaiting response */}
-              {sending && (
-                <div className="chat-message bot typing-indicator" ref={lastBotRef}>
-                  <span className="typing-dots"><span className="dot" /><span className="dot" /><span className="dot" /></span>
-                </div>
-              )}
+              }
+
+              return (
+                <React.Fragment key={m.id || i}>
+                  <div
+                    className={`chat-message ${m.role}`}
+                    ref={isLastBot ? lastBotRef : null}
+                    style={{ whiteSpace: "pre-wrap" }}
+                  >
+                    {isTypingMsg
+                      ? sanitizeTypingDisplay(m.text)
+                      : renderMessageWithLinks(m.text, { isTyping: false })}
+                  </div>
+                  {cta}
+                </React.Fragment>
+              );
+            })}
+            {hasFocus && !sending && input && (
+              <div className="chat-message user typing-indicator">
+                <span className="typing-dots">
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
+                </span>
+              </div>
+            )}
+            {sending && (
+              <div className="chat-message bot typing-indicator" ref={lastBotRef}>
+                <span className="typing-dots">
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
+                </span>
+              </div>
+            )}
           </div>
+          {showQuickReplies && (
+            <div className="quick-replies">
+              {quickReplyOptions.map((option) => (
+                <button
+                  key={option.label}
+                  type="button"
+                  className="quick-reply"
+                  disabled={sending}
+                  onClick={() => sendQuickMessage(option.label, option.send)}
+                  aria-label={option.label}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="chat-input">
             <textarea
-              placeholder="Type your message here..."
+              placeholder={`Ask ${brandName} anything...`}
               rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -653,405 +692,383 @@ export default function Chatbot({ config: userConfig }) {
             />
             <button type="button" onClick={sendMessage} disabled={sending}>
               {sending ? "Sending..." : "Send"}
+              <svg viewBox="0 0 24 24" role="presentation">
+                <path d="M3.4 20.4 22 12 3.4 3.6 3 10l11 2-11 2z" fill="currentColor" />
+              </svg>
             </button>
           </div>
-          {/* Initial quick-start options */}
-          {messages.filter((m) => m.role === "user").length === 0 && (
-            <div className="quick-replies">
-              <button
-                type="button"
-                className="quick-reply"
-                disabled={sending}
-                onClick={() => sendQuickMessage("I need to start a quote with my deck size")}
-                aria-label="I need to start a quote with my deck size"
-              >
-                I need to start a quote with my deck size
-              </button>
-              <button
-                type="button"
-                className="quick-reply"
-                disabled={sending}
-                onClick={() => sendQuickMessage("I Want to know about AT Digital")}
-                aria-label="I Want to know about AT Digital"
-              >
-                I Want to know about AT Digital
-              </button>
-              <button
-                type="button"
-                className="quick-reply"
-                disabled={sending}
-                onClick={() => sendQuickMessage("I need engineering expert assistance")}
-                aria-label="I need engineering expert review - Send an Email"
-              >
-                I need engineering expert review - Send an Email
-              </button>
-            </div>
-          )}
           <div className="chat-footer">
             <a href={config.branding.poweredBy.link} target="_blank">
               {config.branding.poweredBy.text}
             </a>
           </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Floating toggle */}
       <button
         className={`chat-toggle${positionLeft ? " position-left" : ""}`}
         ref={toggleRef}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Open chat"
-        style={{
-          position: "fixed",
-          bottom: 20,
-          right: positionLeft ? "auto" : 20,
-          left: positionLeft ? 20 : "auto",
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          zIndex: 999,
-          background: `linear-gradient(135deg, ${config.style.primaryColor} 0%, ${config.style.secondaryColor} 100%)`,
-          color: "white",
-          border: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-        }}
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2.5 21.5l4.5-.838A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.476 0-2.886-.313-4.156-.878l-3.156.586.586-3.156A7.962 7.962 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z" />
+          <path d="M4 3h16a2 2 0 0 1 2 2v13.764a1 1 0 0 1-1.553.833l-4.894-3.263H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
         </svg>
       </button>
 
       {/* Styles ported from the original widget */}
       <style jsx>{`
         .n8n-chat-widget {
-          --chat--color-primary: var(--n8n-chat-primary-color, #854fff);
-          --chat--color-secondary: var(--n8n-chat-secondary-color, #6b3fd4);
-          /* User message bubble color (more subtle, soft black). You can override via --n8n-chat-user-color on the container if needed. */
-          --chat--color-user: var(--n8n-chat-user-color, #1A1A1A);
-          --chat--color-background: var(--n8n-chat-background-color, #ffffff);
-          --chat--color-font: var(--n8n-chat-font-color, #333333);
+          --chat-primary: var(--n8n-chat-primary-color, #4c46f7);
+          --chat-secondary: var(--n8n-chat-secondary-color, #7a5cff);
+          --chat-surface: var(--n8n-chat-background-color, #0b1025);
+          --chat-font: var(--n8n-chat-font-color, #e4e7ff);
+          --chat-panel: rgba(11, 16, 37, 0.95);
+          --chat-border: rgba(124, 110, 255, 0.35);
+          --chat-user-bg: #ffffff;
+          --chat-user-text: #0b1025;
           font-family: var(--font-geist-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif);
+          color: var(--chat-font);
         }
 
-        .n8n-chat-widget .chat-container {
+        .chat-container {
           position: fixed;
-          bottom: 20px;
-          right: 20px;
-          z-index: 1000;
-          display: none;
-          width: 380px;
-          height: 650px;
-          background: var(--chat--color-background);
-          border-radius: 12px;
-          box-shadow: 0 8px 32px rgba(133, 79, 255, 0.15);
-          border: 1px solid rgba(133, 79, 255, 0.2);
+          bottom: 24px;
+          right: 24px;
+          width: 420px;
+          height: 640px;
+          border-radius: 28px;
+          background: radial-gradient(circle at top right, rgba(124, 110, 255, 0.35), transparent 40%), var(--chat-surface);
+          border: 1px solid var(--chat-border);
+          box-shadow: 0 25px 70px rgba(6, 7, 29, 0.8);
           overflow: hidden;
-          font-family: inherit;
+          display: none;
+          z-index: 1000;
         }
 
-        .n8n-chat-widget .chat-container.position-left {
+        .chat-container.position-left {
           right: auto;
-          left: 20px;
+          left: 24px;
         }
 
-        .n8n-chat-widget .chat-container.open {
+        .chat-container.open {
           display: flex;
-          flex-direction: column;
         }
 
-        .n8n-chat-widget .brand-header {
-          padding: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          border-bottom: 1px solid rgba(133, 79, 255, 0.1);
-          position: relative;
-        }
-
-        .n8n-chat-widget .close-button {
-          position: absolute;
-          right: 16px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          color: var(--chat--color-font);
-          cursor: pointer;
-          padding: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: color 0.2s;
-          font-size: 20px;
-          opacity: 0.6;
-        }
-
-        .n8n-chat-widget .close-button:hover {
-          opacity: 1;
-        }
-
-        .n8n-chat-widget .brand-header img {
-          height: 48px;
-          width: auto;
-        }
-
-        
-
-        .n8n-chat-widget .new-conversation {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          padding: 20px;
-          text-align: center;
-          width: 100%;
-          max-width: 300px;
-        }
-
-        .n8n-chat-widget .welcome-text {
-          font-size: 24px;
-          font-weight: 600;
-          color: var(--chat--color-font);
-          margin-bottom: 24px;
-          line-height: 1.3;
-        }
-
-        .n8n-chat-widget .new-chat-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          width: 100%;
-          padding: 16px 24px;
-          background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: transform 0.3s;
-          font-weight: 500;
-          font-family: inherit;
-          margin-bottom: 12px;
-        }
-
-        .n8n-chat-widget .new-chat-btn:hover { transform: scale(1.02); }
-
-        .n8n-chat-widget .message-icon { width: 20px; height: 20px; }
-
-        .n8n-chat-widget .response-text {
-          font-size: 14px;
-          color: var(--chat--color-font);
-          opacity: 0.7;
-          margin: 0;
-        }
-
-        .n8n-chat-widget .chat-interface { display: none; flex-direction: column; height: 100%; }
-        .n8n-chat-widget .chat-interface.active { display: flex; }
-
-        .n8n-chat-widget .chat-messages {
+        .chat-shell {
           flex: 1;
-          overflow-y: auto;
-          padding: 20px;
-          background: var(--chat--color-background);
           display: flex;
           flex-direction: column;
-          max-height: 100%;
+          padding: 24px;
+          gap: 16px;
+          background: rgba(8, 12, 30, 0.65);
+          backdrop-filter: blur(18px);
         }
 
-        .n8n-chat-widget .chat-message {
+        .chat-hero {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .brand-cluster {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .brand-logo {
+          width: 44px;
+          height: 44px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+
+        .brand-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .brand-logo.placeholder {
+          font-weight: 600;
+          font-size: 18px;
+          color: var(--chat-font);
+        }
+
+        .brand-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .brand-name {
+          margin: 0;
+          font-weight: 600;
+          font-size: 16px;
+          color: var(--chat-font);
+        }
+
+        .brand-meta {
+          margin: 0;
+          font-size: 13px;
+          color: rgba(228, 231, 255, 0.7);
+        }
+
+        .close-button {
+          border: none;
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--chat-font);
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .close-button svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .close-button:hover {
+          background: rgba(255, 255, 255, 0.18);
+          transform: scale(1.05);
+        }
+
+        .hero-copy {
+          background: linear-gradient(135deg, rgba(76, 70, 247, 0.14), rgba(122, 92, 255, 0.05));
+          border: 1px solid rgba(124, 110, 255, 0.3);
+          border-radius: 18px;
+          padding: 18px 20px;
+        }
+
+        .hero-title {
+          margin: 0 0 6px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #ffffff;
+        }
+
+        .hero-subtitle {
+          margin: 0;
+          font-size: 14px;
+          color: rgba(228, 231, 255, 0.75);
+        }
+
+        .chat-messages {
+          flex: 1;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(7, 10, 26, 0.55);
+          padding: 18px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .chat-message {
           padding: 12px 16px;
-          margin: 8px 0;
-          border-radius: 12px;
-          max-width: 80%;
-          word-wrap: break-word;
+          border-radius: 18px;
+          margin-bottom: 12px;
           font-size: 14px;
           line-height: 1.5;
+          width: fit-content;
+          max-width: 85%;
+          word-break: break-word;
         }
 
-        .n8n-chat-widget .chat-message.user {
-          background: var(--chat--color-user);
-          color: #ffffff;
+        .chat-message.user {
+          background: var(--chat-user-bg);
+          color: var(--chat-user-text);
           align-self: flex-end;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-          border: none;
+          border-bottom-right-radius: 6px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
 
-        .n8n-chat-widget .chat-message.bot {
-          background: var(--chat--color-background);
-          border: 1px solid rgba(133, 79, 255, 0.2);
-          color: var(--chat--color-font);
-          align-self: flex-start;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        .chat-message.bot {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--chat-font);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-bottom-left-radius: 6px;
         }
 
-        /* Typing indicator */
-        .n8n-chat-widget .chat-message.typing-indicator {
+        .chat-message.typing-indicator {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 24px;
+          min-height: 30px;
+          padding: 8px 12px;
         }
-        .n8n-chat-widget .typing-dots {
+
+        .typing-dots {
           display: inline-flex;
           gap: 6px;
-          align-items: center;
+          color: inherit;
         }
-        .n8n-chat-widget .typing-dots .dot {
-          width: 6px;
-          height: 6px;
+
+        .typing-dots .dot {
+          width: 8px;
+          height: 8px;
           background: currentColor;
           border-radius: 50%;
-          opacity: 0.3;
-          animation: chat-typing-blink 1.4s infinite both;
+          opacity: 0.2;
+          animation: blink 1.4s infinite both;
         }
-        .n8n-chat-widget .typing-dots .dot:nth-child(2) { animation-delay: 0.2s; }
-        .n8n-chat-widget .typing-dots .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes chat-typing-blink {
+
+        .typing-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
           0%, 80%, 100% { opacity: 0.2; }
           40% { opacity: 1; }
         }
 
-        .n8n-chat-widget .chat-input {
-          padding: 16px;
-          background: var(--chat--color-background);
-          border-top: 1px solid rgba(133, 79, 255, 0.1);
-          display: flex;
-          gap: 8px;
-        }
-
-        .n8n-chat-widget .chat-input textarea {
-          flex: 1;
-          padding: 12px;
-          border: 1px solid rgba(133, 79, 255, 0.2);
-          border-radius: 8px;
-          background: var(--chat--color-background);
-          color: var(--chat--color-font);
-          resize: none;
-          font-family: inherit;
-          font-size: 14px;
-        }
-
-        .n8n-chat-widget .chat-input textarea::placeholder {
-          color: var(--chat--color-font);
-          opacity: 0.6;
-        }
-
-        .n8n-chat-widget .chat-input button {
-          background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          padding: 0 20px;
-          cursor: pointer;
-          transition: transform 0.2s;
-          font-family: inherit;
-          font-weight: 500;
-        }
-
-        .n8n-chat-widget .chat-input button:hover { transform: scale(1.05); }
-
-        /* Quick-reply buttons */
-        .n8n-chat-widget .quick-replies {
-          padding: 0 16px 12px 16px;
+        .message-actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
-          background: var(--chat--color-background);
+          gap: 10px;
+          margin: -4px 0 12px 0;
         }
 
-        .n8n-chat-widget .quick-reply {
-          border: 1px solid rgba(133, 79, 255, 0.25);
-          color: var(--chat--color-font);
-          background: rgba(133, 79, 255, 0.06);
-          padding: 8px 12px;
+        .link-action {
+          border: none;
           border-radius: 999px;
-          cursor: pointer;
+          padding: 8px 14px;
           font-size: 13px;
-          line-height: 1;
-          transition: background 0.2s, transform 0.2s, border-color 0.2s;
-          font-family: inherit;
+          font-weight: 500;
+          background: linear-gradient(135deg, var(--chat-primary), var(--chat-secondary));
+          color: #fff;
+          cursor: pointer;
+          transition: transform 0.2s ease;
         }
 
-        .n8n-chat-widget .quick-reply:hover {
-          background: rgba(133, 79, 255, 0.12);
+        .link-action:hover {
           transform: translateY(-1px);
-          border-color: rgba(133, 79, 255, 0.35);
         }
 
-        .n8n-chat-widget .quick-reply:disabled {
-          opacity: 0.6;
+        .quick-replies {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 10px;
+        }
+
+        .quick-reply {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 14px;
+          padding: 10px 12px;
+          color: rgba(228, 231, 255, 0.86);
+          font-size: 13px;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.2s ease, transform 0.2s ease, border 0.2s ease;
+        }
+
+        .quick-reply:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-1px);
+        }
+
+        .quick-reply:disabled {
+          opacity: 0.4;
           pointer-events: none;
         }
 
-        .n8n-chat-widget .chat-toggle {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 60px;
-          height: 60px;
-          border-radius: 30px;
-          background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
-          color: white;
+        .chat-input {
+          display: flex;
+          gap: 12px;
+          align-items: flex-end;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 12px;
+        }
+
+        .chat-input textarea {
+          flex: 1;
           border: none;
+          resize: none;
+          background: transparent;
+          color: var(--chat-font);
+          font-family: inherit;
+          font-size: 14px;
+          min-height: 44px;
+          outline: none;
+        }
+
+        .chat-input textarea::placeholder {
+          color: rgba(228, 231, 255, 0.6);
+        }
+
+        .chat-input button {
+          border: none;
+          border-radius: 14px;
+          padding: 10px 16px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(135deg, var(--chat-primary), var(--chat-secondary));
+          color: #fff;
+          font-weight: 600;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(133, 79, 255, 0.3);
-          z-index: 999;
-          transition: transform 0.3s;
+          transition: transform 0.2s ease;
+        }
+
+        .chat-input button svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .chat-input button:hover {
+          transform: translateY(-1px);
+        }
+
+        .chat-toggle {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 64px;
+          height: 64px;
+          border-radius: 24px;
+          border: none;
+          background: linear-gradient(135deg, var(--chat-primary), var(--chat-secondary));
+          color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        .n8n-chat-widget .chat-toggle.position-left { right: auto; left: 20px; }
-        .n8n-chat-widget .chat-toggle:hover { transform: scale(1.05); }
-        .n8n-chat-widget .chat-toggle svg { width: 24px; height: 24px; fill: currentColor; }
-
-        .n8n-chat-widget .chat-footer {
-          padding: 8px;
-          text-align: center;
-          background: var(--chat--color-background);
-          border-top: 1px solid rgba(133, 79, 255, 0.1);
-        }
-
-        .n8n-chat-widget .chat-footer a {
-          color: var(--chat--color-primary);
-          text-decoration: none;
-          font-size: 12px;
-          opacity: 0.8;
-          transition: opacity 0.2s;
-          font-family: inherit;
-        }
-
-        .n8n-chat-widget .chat-footer a:hover { opacity: 1; }
-
-        /* Message CTA buttons for links */
-        .n8n-chat-widget .message-actions {
-          padding: 0 16px 12px 16px;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .n8n-chat-widget .link-action {
-          background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 8px 12px;
           cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
-          font-family: inherit;
+          box-shadow: 0 20px 45px rgba(76, 70, 247, 0.45);
+          z-index: 999;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
 
-        .n8n-chat-widget .link-action:hover {
-          filter: brightness(1.05);
+        .chat-toggle.position-left { right: auto; left: 24px; }
+        .chat-toggle:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 25px 60px rgba(76, 70, 247, 0.55);
+        }
+        .chat-toggle svg { width: 28px; height: 28px; fill: currentColor; }
+
+        .chat-footer {
+          text-align: center;
+          font-size: 12px;
+          color: rgba(228, 231, 255, 0.65);
+        }
+
+        .chat-footer a {
+          color: rgba(170, 173, 255, 0.95);
+          text-decoration: none;
+          font-weight: 500;
         }
       `}</style>
     </div>

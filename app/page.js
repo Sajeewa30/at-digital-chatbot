@@ -7,18 +7,17 @@ export default function Home() {
       route: 'general',
     },
     branding: {
-      logo: '/logo.svg', // Optional: add your logo URL
+      logo: '/logo.jpg',
       name: 'AT Digital',
       welcomeText: 'Hi there! Welcome to AT Digital.',
       responseTimeText: 'We typically respond right away',
     },
     style: {
-      // AT Digital accurate red
-      primaryColor: '#E0282A',
-      secondaryColor: '#E0282A',
-      position: 'right', // or 'left'
-      backgroundColor: '#ffffff',
-      fontColor: '#333333',
+      primaryColor: '#4C46F7',
+      secondaryColor: '#7A5CFF',
+      position: 'right',
+      backgroundColor: '#0B1025',
+      fontColor: '#E4E7FF',
     },
   };
 
