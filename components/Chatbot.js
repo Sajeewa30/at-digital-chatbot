@@ -1090,6 +1090,47 @@ export default function Chatbot({ config: userConfig }) {
           text-decoration: none;
           font-weight: 500;
         }
+
+        @media (max-width: 640px) {
+          .chat-container {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100vw;
+            height: 100dvh;
+            border-radius: 0;
+            box-shadow: none;
+            overflow-y: auto;
+          }
+
+          .chat-container.position-left {
+            left: 0;
+            right: 0;
+          }
+
+          .chat-shell {
+            min-height: 100%;
+            padding: calc(16px + env(safe-area-inset-top))
+              calc(16px + env(safe-area-inset-right))
+              calc(16px + env(safe-area-inset-bottom))
+              calc(16px + env(safe-area-inset-left));
+            gap: 12px;
+          }
+
+          .chat-toggle {
+            bottom: 16px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 20px;
+          }
+
+          .chat-toggle.position-left {
+            left: 16px;
+            right: auto;
+          }
+        }
       `}</style>
     </div>
   );
