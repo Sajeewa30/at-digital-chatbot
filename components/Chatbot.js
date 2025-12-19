@@ -1118,6 +1118,19 @@ export default function Chatbot({ config: userConfig }) {
             gap: 12px;
           }
 
+          .hero-copy {
+            padding: 12px 14px;
+            border-radius: 14px;
+          }
+
+          .hero-title {
+            font-size: 16px;
+          }
+
+          .hero-subtitle {
+            font-size: 13px;
+          }
+
           .chat-toggle {
             bottom: 16px;
             right: 16px;
