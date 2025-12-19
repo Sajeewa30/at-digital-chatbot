@@ -12,7 +12,7 @@ const baseConfig = {
     responseTimeText: "We typically respond right away",
     poweredBy: {
       text: "Powered by AT Digital",
-      link: "https://atdigital.com.au/",
+      link: "https://atdigital.io/",
     },
   },
   style: {

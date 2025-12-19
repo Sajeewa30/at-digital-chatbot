@@ -109,7 +109,7 @@ const defaultConfig = {
     responseTimeText: "",
     poweredBy: {
       text: "Powered by AT Digital",
-      link: "https://atdigital.com.au/",
+      link: "https://atdigital.io/",
     },
   },
   style: {
@@ -155,6 +155,20 @@ export default function Chatbot({ config: userConfig }) {
   const typingSpeedMs = Math.max(1, Number(config?.typingSpeedMs ?? 20));
 
   const positionLeft = config.style.position === "left";
+
+  // Helper to keep scroll pinned near the bottom unless the user scrolls up
+  const scrollToBottom = useCallback(
+    (force = false) => {
+      const container = messagesRef.current;
+      if (!container) return;
+      const distance =
+        container.scrollHeight - (container.scrollTop + container.clientHeight);
+      if (force || distance <= 80) {
+        container.scrollTop = container.scrollHeight;
+      }
+    },
+    []
+  );
 
   // Refs for outside-click handling
   const containerRef = useRef(null);
@@ -206,24 +220,33 @@ export default function Chatbot({ config: userConfig }) {
     const last = messages[messages.length - 1];
     if (last.role === "user") {
       // Scroll to bottom so the sent message is visible
-      container.scrollTop = container.scrollHeight;
+      scrollToBottom(true);
     } else {
-      // Align to the top of the new bot reply
-      if (lastBotRef.current) {
-        lastBotRef.current.scrollIntoView({ block: "start", behavior: "smooth" });
+      // Align to the top of the new bot reply when it finishes typing
+      const isTypingCurrent =
+        Boolean(typingTimerRef.current) && last.id === typingMessageIdRef.current;
+      if (isTypingCurrent) {
+        scrollToBottom(false);
+      } else if (lastBotRef.current) {
+        lastBotRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
       } else {
-        // Fallback: near-bottom
-        container.scrollTop = container.scrollHeight;
+        scrollToBottom(true);
       }
     }
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   // Ensure typing indicator stays visible by keeping view scrolled
   useEffect(() => {
     if (!sending) return;
-    const container = messagesRef.current;
-    if (container) container.scrollTop = container.scrollHeight;
-  }, [sending]);
+    scrollToBottom(true);
+  }, [sending, scrollToBottom]);
+
+  // When the user is typing, keep the indicator in view
+  useEffect(() => {
+    if (hasFocus && input && !sending) {
+      scrollToBottom(true);
+    }
+  }, [hasFocus, input, sending, scrollToBottom]);
 
   const addMessage = useCallback((role, text) => {
     const id = crypto.randomUUID();
@@ -286,9 +309,8 @@ export default function Chatbot({ config: userConfig }) {
           const u = new URL(stripTrailingPunct(it.url));
           const host = (u.hostname || "").toLowerCase();
           const allowedHost =
-            host === "atdigital.com.au" ||
-            host.endsWith(".atdigital.com.au") ||
-            host.endsWith("atdigital.au");
+            host === "atdigital.io" ||
+            host.endsWith(".atdigital.io");
           const pathDepth = (u.pathname || "/").split("/").filter(Boolean).length;
           if (allowedHost && (u.search || pathDepth > 1)) {
             raw.push(it);
@@ -307,9 +329,8 @@ export default function Chatbot({ config: userConfig }) {
       const { key, host } = normalizeKey(cleanedUrl);
       if (!key || !host) continue;
       const allowedHost =
-        host === "atdigital.com.au" ||
-        host.endsWith(".atdigital.com.au") ||
-        host.endsWith("atdigital.au");
+        host === "atdigital.io" ||
+        host.endsWith(".atdigital.io");
       if (!allowedHost) continue;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -376,8 +397,7 @@ export default function Chatbot({ config: userConfig }) {
         });
 
         // Keep the latest content visible as it grows
-        const container = messagesRef.current;
-        if (container) container.scrollTop = container.scrollHeight;
+        scrollToBottom(false);
 
         if (i >= len) {
           clearInterval(typingTimerRef.current);
@@ -387,7 +407,7 @@ export default function Chatbot({ config: userConfig }) {
         }
       }, typingSpeedMs);
     },
-    [typingSpeedMs, extractLinks]
+    [typingSpeedMs, extractLinks, scrollToBottom]
   );
 
   const startNewConversation = useCallback(() => {
