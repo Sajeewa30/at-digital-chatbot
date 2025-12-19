@@ -150,16 +150,6 @@ export default function Chatbot({ config: userConfig }) {
   const [hasFocus, setHasFocus] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [debug, setDebug] = useState({
-    w: 0,
-    mq: false,
-    dpr: 1,
-    rect: null,
-    top: "",
-    left: "",
-    width: "",
-    height: "",
-  });
   // CTAs persist per message; no global active gating
   // Typing speed for bot replies (milliseconds per character)
   // Adjust via `config.typingSpeedMs` when using the component.
@@ -216,32 +206,7 @@ export default function Chatbot({ config: userConfig }) {
   useEffect(() => {
     if (!mounted) return;
     const mql = window.matchMedia("(max-width: 640px)");
-    const update = () => {
-      setIsMobile(mql.matches);
-      let rect = null;
-      let top = "";
-      let left = "";
-      let width = "";
-      let height = "";
-      if (open && containerRef.current) {
-        rect = containerRef.current.getBoundingClientRect();
-        const cs = window.getComputedStyle(containerRef.current);
-        top = cs.top;
-        left = cs.left;
-        width = cs.width;
-        height = cs.height;
-      }
-      setDebug({
-        w: window.innerWidth,
-        mq: mql.matches,
-        dpr: window.devicePixelRatio || 1,
-        rect,
-        top,
-        left,
-        width,
-        height,
-      });
-    };
+    const update = () => setIsMobile(mql.matches);
     update();
     mql.addEventListener("change", update);
     window.addEventListener("resize", update);
@@ -249,7 +214,7 @@ export default function Chatbot({ config: userConfig }) {
       mql.removeEventListener("change", update);
       window.removeEventListener("resize", update);
     };
-  }, [mounted, open]);
+  }, [mounted]);
 
   // Clear any running typing interval on unmount
   useEffect(() => {
@@ -560,7 +525,6 @@ export default function Chatbot({ config: userConfig }) {
 
   if (!mounted) return null;
 
-  const showDebug = true;
   const containerStyle = {
     display: open ? "flex" : "none",
     ...(isMobile
@@ -805,22 +769,6 @@ export default function Chatbot({ config: userConfig }) {
           <path d="M4 3h16a2 2 0 0 1 2 2v13.764a1 1 0 0 1-1.553.833l-4.894-3.263H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
         </svg>
       </button>
-
-      {showDebug && (
-        <div className="debug-badge" aria-hidden="true">
-          <div>w:{debug.w}px mq:{debug.mq ? "1" : "0"} dpr:{debug.dpr}</div>
-          {debug.rect && (
-            <div>
-              rect:{Math.round(debug.rect.left)},{Math.round(debug.rect.top)} {Math.round(debug.rect.width)}x{Math.round(debug.rect.height)}
-            </div>
-          )}
-          {debug.rect && (
-            <div>
-              css:{debug.left},{debug.top} {debug.width}x{debug.height}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Styles ported from the original widget */}
       <style jsx>{`
@@ -1174,20 +1122,6 @@ export default function Chatbot({ config: userConfig }) {
           color: rgba(170, 173, 255, 0.95);
           text-decoration: none;
           font-weight: 500;
-        }
-
-        .debug-badge {
-          position: fixed;
-          top: 8px;
-          left: 8px;
-          background: rgba(0, 0, 0, 0.7);
-          color: #fff;
-          font-size: 11px;
-          padding: 4px 6px;
-          border-radius: 6px;
-          z-index: 2000;
-          pointer-events: none;
-          line-height: 1.3;
         }
 
         @media (max-width: 640px) {
