@@ -1201,6 +1201,24 @@ export default function Chatbot({ config: userConfig }) {
             right: auto;
           }
         }
+
+        @media (min-width: 641px) and (max-height: 700px) {
+          .chat-container {
+            top: 16px;
+            bottom: 16px;
+            height: auto;
+            max-height: calc(100vh - 32px);
+          }
+
+          .chat-shell {
+            min-height: max-content;
+          }
+
+          .chat-messages {
+            flex: 0 0 auto;
+            height: clamp(200px, 40vh, 360px);
+          }
+        }
       `}</style>
     </div>
   );
