@@ -121,7 +121,7 @@ const defaultConfig = {
   },
   audio: {
     sendVolume: 0.2,
-    receiveVolume: 0.2,
+    receiveVolume: 0.1,
   },
 };
 
