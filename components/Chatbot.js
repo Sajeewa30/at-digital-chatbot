@@ -119,6 +119,10 @@ const defaultConfig = {
     backgroundColor: "#0B1025",
     fontColor: "#E4E7FF",
   },
+  audio: {
+    sendVolume: 0.2,
+    receiveVolume: 0.2,
+  },
 };
 
 export default function Chatbot({ config: userConfig }) {
@@ -134,6 +138,7 @@ export default function Chatbot({ config: userConfig }) {
       webhook: { ...defaultConfig.webhook, ...(userConfig?.webhook || {}) },
       branding: { ...defaultConfig.branding, ...(userConfig?.branding || {}) },
       style: { ...defaultConfig.style, ...(userConfig?.style || {}) },
+      audio: { ...defaultConfig.audio, ...(userConfig?.audio || {}) },
       typingSpeedMs: Number(
         userConfig?.typingSpeedMs ?? defaultConfig.typingSpeedMs
       ),
@@ -156,6 +161,16 @@ export default function Chatbot({ config: userConfig }) {
   const typingSpeedMs = Math.max(1, Number(config?.typingSpeedMs ?? 20));
 
   const positionLeft = config.style.position === "left";
+  const legacyVolume = Number(config?.audio?.volume);
+  const sendVolumeRaw =
+    Number.isFinite(legacyVolume) ? legacyVolume : Number(config?.audio?.sendVolume);
+  const receiveVolumeRaw =
+    Number.isFinite(legacyVolume) ? legacyVolume : Number(config?.audio?.receiveVolume);
+  const sendVolume = Math.min(1, Math.max(0, Number.isFinite(sendVolumeRaw) ? sendVolumeRaw : 0.4));
+  const receiveVolume = Math.min(
+    1,
+    Math.max(0, Number.isFinite(receiveVolumeRaw) ? receiveVolumeRaw : 0.4)
+  );
 
   // Helper to keep scroll pinned near the bottom unless the user scrolls up
   const scrollToBottom = useCallback(
@@ -183,6 +198,40 @@ export default function Chatbot({ config: userConfig }) {
   const typingMessageIdRef = useRef(null);
   // Full text of the message currently being typed (for graceful finalization)
   const typingFullTextRef = useRef("");
+  const sendAudioRef = useRef(null);
+  const receiveAudioRef = useRef(null);
+  const lastSoundAtRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const send = new Audio("/send.mp3");
+    const receive = new Audio("/recieve.mp3");
+    send.preload = "auto";
+    receive.preload = "auto";
+    send.volume = sendVolume;
+    receive.volume = receiveVolume;
+    sendAudioRef.current = send;
+    receiveAudioRef.current = receive;
+  }, [sendVolume, receiveVolume]);
+
+  const playSound = useCallback((type) => {
+    if (typeof window === "undefined") return;
+    const nowMs = Date.now();
+    if (nowMs - lastSoundAtRef.current < 120) return;
+    lastSoundAtRef.current = nowMs;
+
+    const audio = type === "send" ? sendAudioRef.current : receiveAudioRef.current;
+    if (!audio) return;
+    try {
+      audio.currentTime = 0;
+      const res = audio.play();
+      if (res && typeof res.catch === "function") {
+        res.catch(() => {});
+      }
+    } catch {
+      // ignore playback failures (autoplay policy, etc.)
+    }
+  }, []);
 
   // Close when clicking outside the chat container and toggle button
   useEffect(() => {
@@ -418,10 +467,11 @@ export default function Chatbot({ config: userConfig }) {
           typingTimerRef.current = null;
           typingMessageIdRef.current = null;
           // Bot message finished typing; CTAs render based on message state
+          playSound("receive");
         }
       }, typingSpeedMs);
     },
-    [typingSpeedMs, extractLinks, scrollToBottom]
+    [typingSpeedMs, extractLinks, scrollToBottom, playSound]
   );
 
   const startNewConversation = useCallback(() => {
@@ -445,6 +495,7 @@ export default function Chatbot({ config: userConfig }) {
     if (!message || !sessionId || sending) return;
     // Show what the user typed (with punctuation) in UI
     addMessage("user", display);
+    playSound("send");
     setInput("");
     setSending(true);
 
@@ -478,7 +529,7 @@ export default function Chatbot({ config: userConfig }) {
     } finally {
       // no-op: sending already handled above
     }
-  }, [addMessage, config.webhook.route, input, sending, sessionId, typeOutBotMessage]);
+  }, [addMessage, config.webhook.route, input, sending, sessionId, typeOutBotMessage, playSound]);
 
   // Send a pre-defined quick message using the same webhook flow
   const sendQuickMessage = useCallback(
@@ -488,6 +539,7 @@ export default function Chatbot({ config: userConfig }) {
       if (!message || !sessionId || sending) return;
       // Show the display text in UI
       addMessage("user", display);
+      playSound("send");
       setSending(true);
 
       const payload = {
@@ -520,7 +572,7 @@ export default function Chatbot({ config: userConfig }) {
         // no-op: sending already handled above
       }
     },
-    [addMessage, config.webhook.route, normalizeInput, sending, sessionId, typeOutBotMessage]
+    [addMessage, config.webhook.route, normalizeInput, sending, sessionId, typeOutBotMessage, playSound]
   );
 
   if (!mounted) return null;
