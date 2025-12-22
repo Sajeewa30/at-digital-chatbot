@@ -112,18 +112,18 @@ describe("Chatbot", () => {
     });
 
     const quickReply = await screen.findByRole("button", {
-      name: `Tell me about AT Digital's services`,
+      name: `What are the services of AT Digital`,
     });
     await user.click(quickReply);
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(payload.chatInput).toBe("Tell me about AT Digital's services");
+    expect(payload.chatInput).toBe("What are the services of AT Digital");
 
     await waitFor(() => {
       expect(
         screen.queryByRole("button", {
-          name: `Tell me about AT Digital's services`,
+          name: `What are the services of AT Digital`,
         })
       ).not.toBeInTheDocument();
     });

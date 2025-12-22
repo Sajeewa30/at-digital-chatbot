@@ -565,8 +565,8 @@ export default function Chatbot({ config: userConfig }) {
   const heroSubtext = `Ask anything about ${brandName}'s services, strategy, or support.`;
   const quickReplyOptions = [
     {
-      label: `Tell me about ${brandName}'s services`,
-      send: `Tell me about ${brandName}'s services`,
+      label: `What are the services of ${brandName}`,
+      send: `What are the services of ${brandName}`,
     },
     {
       label: "I need help crafting my digital strategy",
