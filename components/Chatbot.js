@@ -158,6 +158,15 @@ export default function Chatbot({ config: userConfig }) {
   const [expertFormOpen, setExpertFormOpen] = useState(false);
   const [expertSending, setExpertSending] = useState(false);
   const [expertError, setExpertError] = useState("");
+  const [expertErrors, setExpertErrors] = useState({});
+  const [expertTouched, setExpertTouched] = useState({
+    fullName: false,
+    email: false,
+    phone: false,
+    service: false,
+    note: false,
+  });
+  const [expertSubmitAttempted, setExpertSubmitAttempted] = useState(false);
   const [expertForm, setExpertForm] = useState({
     fullName: "",
     email: "",
@@ -594,7 +603,37 @@ export default function Chatbot({ config: userConfig }) {
       note: "",
     });
     setExpertError("");
+    setExpertErrors({});
+    setExpertTouched({
+      fullName: false,
+      email: false,
+      phone: false,
+      service: false,
+      note: false,
+    });
+    setExpertSubmitAttempted(false);
     setExpertSending(false);
+  }, []);
+
+  const validateExpertForm = useCallback((values) => {
+    const errors = {};
+    const fullName = String(values.fullName || "").trim();
+    const email = String(values.email || "").trim();
+    const phone = String(values.phone || "").trim();
+    const service = String(values.service || "").trim();
+    const note = String(values.note || "").trim();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const phoneOk = /^[+]?[\d\s().-]{7,}$/.test(phone);
+
+    if (!fullName) errors.fullName = "Full name is required.";
+    if (!email) errors.email = "Email is required.";
+    else if (!emailOk) errors.email = "Enter a valid email address.";
+    if (!phone) errors.phone = "Phone number is required.";
+    else if (!phoneOk) errors.phone = "Enter a valid phone number.";
+    if (!service) errors.service = "Select a service.";
+    if (!note) errors.note = "Short note is required.";
+
+    return errors;
   }, []);
 
   const openExpertForm = useCallback(() => {
@@ -607,9 +646,26 @@ export default function Chatbot({ config: userConfig }) {
     resetExpertForm();
   }, [resetExpertForm]);
 
-  const handleExpertFieldChange = useCallback((field, value) => {
-    setExpertForm((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const handleExpertFieldChange = useCallback(
+    (field, value) => {
+      setExpertForm((prev) => {
+        const next = { ...prev, [field]: value };
+        if (expertSubmitAttempted || expertTouched[field]) {
+          setExpertErrors(validateExpertForm(next));
+        }
+        return next;
+      });
+    },
+    [expertSubmitAttempted, expertTouched, validateExpertForm]
+  );
+
+  const handleExpertFieldBlur = useCallback(
+    (field) => {
+      setExpertTouched((prev) => ({ ...prev, [field]: true }));
+      setExpertErrors(validateExpertForm(expertForm));
+    },
+    [expertForm, validateExpertForm]
+  );
 
   const submitExpertForm = useCallback(
     async (e) => {
@@ -618,8 +674,6 @@ export default function Chatbot({ config: userConfig }) {
 
       const emailValue = String(expertForm.email || "").trim();
       const phoneValue = String(expertForm.phone || "").trim();
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
-      const phoneOk = /^[+]?[\d\s().-]{7,}$/.test(phoneValue);
 
       const payload = {
         action: "expertRequest",
@@ -631,23 +685,10 @@ export default function Chatbot({ config: userConfig }) {
         note: String(expertForm.note || "").trim(),
       };
 
-      const missing = [
-        payload.fullName,
-        payload.email,
-        payload.phone,
-        payload.service,
-        payload.note,
-      ].some((val) => !val);
-      if (missing) {
-        setExpertError("Please complete all required fields.");
-        return;
-      }
-      if (!emailOk) {
-        setExpertError("Please enter a valid email address.");
-        return;
-      }
-      if (!phoneOk) {
-        setExpertError("Please enter a valid phone number.");
+      setExpertSubmitAttempted(true);
+      const nextErrors = validateExpertForm(payload);
+      setExpertErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
         return;
       }
 
@@ -667,12 +708,13 @@ export default function Chatbot({ config: userConfig }) {
         setExpertFormOpen(false);
         resetExpertForm();
         addMessage("bot", "Thank you, your details are successfully passed to our experts.");
+        playSound("receive");
       } catch (err) {
         setExpertSending(false);
         setExpertError("Sorry, we couldn't submit your details. Please try again.");
       }
     },
-    [addMessage, expertForm, expertSending, resetExpertForm, sessionId]
+    [addMessage, expertForm, expertSending, resetExpertForm, sessionId, playSound, validateExpertForm]
   );
 
   if (!mounted) return null;
@@ -897,7 +939,7 @@ export default function Chatbot({ config: userConfig }) {
                   className="quick-reply"
                   disabled={sending}
                   onClick={() => {
-                    if (option.type === "expert" && !isMobile) {
+                    if (option.type === "expert") {
                       openExpertForm();
                     } else {
                       sendQuickMessage(option.label, option.send);
@@ -938,13 +980,12 @@ export default function Chatbot({ config: userConfig }) {
             </a>
           </div>
         </div>
-        {!isMobile && (
-          <div className={`expert-form-panel${expertFormOpen ? " open" : ""}`}>
-            <div className="expert-form-header">
-              <div>
-                <p className="expert-form-title">Connect with an expert</p>
-                <p className="expert-form-subtitle">Tell us a bit about your needs.</p>
-              </div>
+        <div className={`expert-form-panel${expertFormOpen ? " open" : ""}`}>
+          <div className="expert-form-header">
+            <div>
+              <p className="expert-form-title">Connect with an expert</p>
+              <p className="expert-form-subtitle">Tell us a bit about your needs.</p>
+            </div>
               <button
                 type="button"
                 className="expert-form-close"
@@ -959,15 +1000,19 @@ export default function Chatbot({ config: userConfig }) {
                 </svg>
               </button>
             </div>
-            <form className="expert-form-body" onSubmit={submitExpertForm}>
+            <form className="expert-form-body" onSubmit={submitExpertForm} noValidate>
               <label className="expert-field">
                 Full name
                 <input
                   type="text"
                   value={expertForm.fullName}
                   onChange={(e) => handleExpertFieldChange("fullName", e.target.value)}
+                  onBlur={() => handleExpertFieldBlur("fullName")}
                   required
                 />
+                {(expertSubmitAttempted || expertTouched.fullName) && expertErrors.fullName && (
+                  <span className="expert-field-error">{expertErrors.fullName}</span>
+                )}
               </label>
               <label className="expert-field">
                 Email
@@ -975,9 +1020,13 @@ export default function Chatbot({ config: userConfig }) {
                   type="email"
                   value={expertForm.email}
                   onChange={(e) => handleExpertFieldChange("email", e.target.value)}
+                  onBlur={() => handleExpertFieldBlur("email")}
                   required
-                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                  pattern={"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"}
                 />
+                {(expertSubmitAttempted || expertTouched.email) && expertErrors.email && (
+                  <span className="expert-field-error">{expertErrors.email}</span>
+                )}
               </label>
               <label className="expert-field">
                 Phone number
@@ -985,15 +1034,20 @@ export default function Chatbot({ config: userConfig }) {
                   type="tel"
                   value={expertForm.phone}
                   onChange={(e) => handleExpertFieldChange("phone", e.target.value)}
+                  onBlur={() => handleExpertFieldBlur("phone")}
                   required
-                  pattern="^[+]?[\d\s().-]{7,}$"
+                  pattern={"^[+]?[\\d\\s().-]{7,}$"}
                 />
+                {(expertSubmitAttempted || expertTouched.phone) && expertErrors.phone && (
+                  <span className="expert-field-error">{expertErrors.phone}</span>
+                )}
               </label>
               <label className="expert-field">
                 Service of interest
                 <select
                   value={expertForm.service}
                   onChange={(e) => handleExpertFieldChange("service", e.target.value)}
+                  onBlur={() => handleExpertFieldBlur("service")}
                   required
                 >
                   <option value="">Select a service</option>
@@ -1002,6 +1056,9 @@ export default function Chatbot({ config: userConfig }) {
                   <option value="App Development">App Development</option>
                   <option value="Web Design">Web Design</option>
                 </select>
+                {(expertSubmitAttempted || expertTouched.service) && expertErrors.service && (
+                  <span className="expert-field-error">{expertErrors.service}</span>
+                )}
               </label>
               <label className="expert-field">
                 Short note
@@ -1009,8 +1066,12 @@ export default function Chatbot({ config: userConfig }) {
                   rows={3}
                   value={expertForm.note}
                   onChange={(e) => handleExpertFieldChange("note", e.target.value)}
+                  onBlur={() => handleExpertFieldBlur("note")}
                   required
                 />
+                {(expertSubmitAttempted || expertTouched.note) && expertErrors.note && (
+                  <span className="expert-field-error">{expertErrors.note}</span>
+                )}
               </label>
               {expertError && <p className="expert-form-error">{expertError}</p>}
               <button type="submit" className="expert-form-submit" disabled={expertSending}>
@@ -1018,9 +1079,7 @@ export default function Chatbot({ config: userConfig }) {
               </button>
             </form>
           </div>
-        )}
-      </div>
-
+        </div>
       <button
         className={`chat-toggle${positionLeft ? " position-left" : ""}`}
         ref={toggleRef}
@@ -1474,6 +1533,8 @@ export default function Chatbot({ config: userConfig }) {
         .expert-field input,
         .expert-field select,
         .expert-field textarea {
+          width: calc(100% - 6px);
+          box-sizing: border-box;
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 10px;
           background: #141a33;
@@ -1496,10 +1557,22 @@ export default function Chatbot({ config: userConfig }) {
           box-shadow: 0 0 0 2px rgba(124, 110, 255, 0.2);
         }
 
+        .expert-field input:invalid,
+        .expert-field select:invalid,
+        .expert-field textarea:invalid {
+          border-color: rgba(124, 110, 255, 0.6);
+          box-shadow: none;
+        }
+
         .expert-form-error {
           margin: 0;
           font-size: 12px;
           color: #ffb4b4;
+        }
+
+        .expert-field-error {
+          font-size: 11px;
+          color: rgba(228, 231, 255, 0.75);
         }
 
         .expert-form-submit {
@@ -1570,6 +1643,12 @@ export default function Chatbot({ config: userConfig }) {
           .chat-toggle.position-left {
             left: 16px;
             right: auto;
+          }
+
+          .expert-form-panel {
+            width: 100%;
+            max-width: 100%;
+            border-left: none;
           }
         }
 
