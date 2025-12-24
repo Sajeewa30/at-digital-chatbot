@@ -155,6 +155,16 @@ export default function Chatbot({ config: userConfig }) {
   const [hasFocus, setHasFocus] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [expertFormOpen, setExpertFormOpen] = useState(false);
+  const [expertSending, setExpertSending] = useState(false);
+  const [expertError, setExpertError] = useState("");
+  const [expertForm, setExpertForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    service: "",
+    note: "",
+  });
   // CTAs persist per message; no global active gating
   // Typing speed for bot replies (milliseconds per character)
   // Adjust via `config.typingSpeedMs` when using the component.
@@ -575,6 +585,96 @@ export default function Chatbot({ config: userConfig }) {
     [addMessage, config.webhook.route, normalizeInput, sending, sessionId, typeOutBotMessage, playSound]
   );
 
+  const resetExpertForm = useCallback(() => {
+    setExpertForm({
+      fullName: "",
+      email: "",
+      phone: "",
+      service: "",
+      note: "",
+    });
+    setExpertError("");
+    setExpertSending(false);
+  }, []);
+
+  const openExpertForm = useCallback(() => {
+    setExpertFormOpen(true);
+    setExpertError("");
+  }, []);
+
+  const closeExpertForm = useCallback(() => {
+    setExpertFormOpen(false);
+    resetExpertForm();
+  }, [resetExpertForm]);
+
+  const handleExpertFieldChange = useCallback((field, value) => {
+    setExpertForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const submitExpertForm = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (expertSending) return;
+
+      const emailValue = String(expertForm.email || "").trim();
+      const phoneValue = String(expertForm.phone || "").trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
+      const phoneOk = /^[+]?[\d\s().-]{7,}$/.test(phoneValue);
+
+      const payload = {
+        action: "expertRequest",
+        sessionId,
+        fullName: String(expertForm.fullName || "").trim(),
+        email: emailValue,
+        phone: phoneValue,
+        service: String(expertForm.service || "").trim(),
+        note: String(expertForm.note || "").trim(),
+      };
+
+      const missing = [
+        payload.fullName,
+        payload.email,
+        payload.phone,
+        payload.service,
+        payload.note,
+      ].some((val) => !val);
+      if (missing) {
+        setExpertError("Please complete all required fields.");
+        return;
+      }
+      if (!emailOk) {
+        setExpertError("Please enter a valid email address.");
+        return;
+      }
+      if (!phoneOk) {
+        setExpertError("Please enter a valid phone number.");
+        return;
+      }
+
+      setExpertSending(true);
+      setExpertError("");
+
+      try {
+        const res = await fetch("/api/expert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          throw new Error("Failed");
+        }
+        setExpertSending(false);
+        setExpertFormOpen(false);
+        resetExpertForm();
+        addMessage("bot", "Thank you, your details are successfully passed to our experts.");
+      } catch (err) {
+        setExpertSending(false);
+        setExpertError("Sorry, we couldn't submit your details. Please try again.");
+      }
+    },
+    [addMessage, expertForm, expertSending, resetExpertForm, sessionId]
+  );
+
   if (!mounted) return null;
 
   const containerStyle = {
@@ -619,14 +719,17 @@ export default function Chatbot({ config: userConfig }) {
     {
       label: `What are the services of ${brandName}`,
       send: `What are the services of ${brandName}`,
+      type: "message",
     },
     {
       label: "I need help crafting my digital strategy",
       send: "I need help crafting my digital strategy",
+      type: "message",
     },
     {
       label: `Connect me with an expert at ${brandName}`,
       send: `Connect me with an expert at ${brandName}`,
+      type: "expert",
     },
   ];
   const showQuickReplies = messages.filter((m) => m.role === "user").length === 0;
@@ -793,7 +896,13 @@ export default function Chatbot({ config: userConfig }) {
                   type="button"
                   className="quick-reply"
                   disabled={sending}
-                  onClick={() => sendQuickMessage(option.label, option.send)}
+                  onClick={() => {
+                    if (option.type === "expert" && !isMobile) {
+                      openExpertForm();
+                    } else {
+                      sendQuickMessage(option.label, option.send);
+                    }
+                  }}
                   aria-label={option.label}
                 >
                   {option.label}
@@ -829,6 +938,87 @@ export default function Chatbot({ config: userConfig }) {
             </a>
           </div>
         </div>
+        {!isMobile && (
+          <div className={`expert-form-panel${expertFormOpen ? " open" : ""}`}>
+            <div className="expert-form-header">
+              <div>
+                <p className="expert-form-title">Connect with an expert</p>
+                <p className="expert-form-subtitle">Tell us a bit about your needs.</p>
+              </div>
+              <button
+                type="button"
+                className="expert-form-close"
+                onClick={closeExpertForm}
+                aria-label="Close expert form"
+              >
+                <svg viewBox="0 0 24 24" role="presentation">
+                  <path
+                    d="M12 10.586 5.757 4.343 4.343 5.757 10.586 12l-6.243 6.243 1.414 1.414L12 13.414l6.243 6.243 1.414-1.414L13.414 12l6.243-6.243-1.414-1.414Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            </div>
+            <form className="expert-form-body" onSubmit={submitExpertForm}>
+              <label className="expert-field">
+                Full name
+                <input
+                  type="text"
+                  value={expertForm.fullName}
+                  onChange={(e) => handleExpertFieldChange("fullName", e.target.value)}
+                  required
+                />
+              </label>
+              <label className="expert-field">
+                Email
+                <input
+                  type="email"
+                  value={expertForm.email}
+                  onChange={(e) => handleExpertFieldChange("email", e.target.value)}
+                  required
+                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                />
+              </label>
+              <label className="expert-field">
+                Phone number
+                <input
+                  type="tel"
+                  value={expertForm.phone}
+                  onChange={(e) => handleExpertFieldChange("phone", e.target.value)}
+                  required
+                  pattern="^[+]?[\d\s().-]{7,}$"
+                />
+              </label>
+              <label className="expert-field">
+                Service of interest
+                <select
+                  value={expertForm.service}
+                  onChange={(e) => handleExpertFieldChange("service", e.target.value)}
+                  required
+                >
+                  <option value="">Select a service</option>
+                  <option value="PPC">PPC</option>
+                  <option value="SEO">SEO</option>
+                  <option value="App Development">App Development</option>
+                  <option value="Web Design">Web Design</option>
+                </select>
+              </label>
+              <label className="expert-field">
+                Short note
+                <textarea
+                  rows={3}
+                  value={expertForm.note}
+                  onChange={(e) => handleExpertFieldChange("note", e.target.value)}
+                  required
+                />
+              </label>
+              {expertError && <p className="expert-form-error">{expertError}</p>}
+              <button type="submit" className="expert-form-submit" disabled={expertSending}>
+                {expertSending ? "Submitting..." : "Submit details"}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       <button
@@ -869,6 +1059,7 @@ export default function Chatbot({ config: userConfig }) {
           border: 1px solid var(--chat-border);
           box-shadow: 0 25px 70px rgba(6, 7, 29, 0.8);
           overflow-y: auto;
+          overflow-x: hidden;
           display: none;
           z-index: 1000;
         }
@@ -891,6 +1082,7 @@ export default function Chatbot({ config: userConfig }) {
           background: rgba(8, 12, 30, 0.65);
           backdrop-filter: blur(18px);
           min-height: 100%;
+          overflow-x: hidden;
         }
 
         .chat-hero {
@@ -1196,6 +1388,133 @@ export default function Chatbot({ config: userConfig }) {
           color: rgba(170, 173, 255, 0.95);
           text-decoration: none;
           font-weight: 500;
+        }
+
+        .expert-form-panel {
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 100%;
+          width: 340px;
+          max-width: 90%;
+          background: rgba(7, 10, 26, 0.96);
+          border-left: 1px solid rgba(124, 110, 255, 0.35);
+          box-shadow: -20px 0 45px rgba(6, 7, 29, 0.6);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 20px;
+          transform: translateX(110%);
+          opacity: 0;
+          pointer-events: none;
+          transition: transform 0.35s ease, opacity 0.25s ease;
+          z-index: 2;
+        }
+
+        .expert-form-panel.open {
+          transform: translateX(0);
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .expert-form-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .expert-form-title {
+          margin: 0 0 4px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #fff;
+        }
+
+        .expert-form-subtitle {
+          margin: 0;
+          font-size: 12px;
+          color: rgba(228, 231, 255, 0.7);
+        }
+
+        .expert-form-close {
+          border: none;
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--chat-font);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .expert-form-close svg {
+          width: 16px;
+          height: 16px;
+        }
+
+        .expert-form-body {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          flex: 1;
+          overflow-y: auto;
+        }
+
+        .expert-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-size: 12px;
+          color: rgba(228, 231, 255, 0.75);
+        }
+
+        .expert-field input,
+        .expert-field select,
+        .expert-field textarea {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 10px;
+          background: #141a33;
+          color: #fff;
+          padding: 10px 12px;
+          font-size: 13px;
+          font-family: inherit;
+        }
+
+        .expert-field select option {
+          color: #0b1025;
+          background: #fff;
+        }
+
+        .expert-field input:focus,
+        .expert-field select:focus,
+        .expert-field textarea:focus {
+          outline: none;
+          border-color: rgba(124, 110, 255, 0.6);
+          box-shadow: 0 0 0 2px rgba(124, 110, 255, 0.2);
+        }
+
+        .expert-form-error {
+          margin: 0;
+          font-size: 12px;
+          color: #ffb4b4;
+        }
+
+        .expert-form-submit {
+          border: none;
+          border-radius: 12px;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, var(--chat-primary), var(--chat-secondary));
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+
+        .expert-form-submit:hover {
+          transform: translateY(-1px);
         }
 
         @media (max-width: 640px) {
