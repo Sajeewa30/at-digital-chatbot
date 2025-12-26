@@ -1119,17 +1119,39 @@ export default function Chatbot({ config: userConfig }) {
           box-shadow: 0 25px 70px rgba(6, 7, 29, 0.8);
           overflow-y: auto;
           overflow-x: hidden;
-          display: none;
+          display: flex;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transform: translate(16px, 16px) scale(0.6);
+          transform-origin: bottom right;
+          transition: opacity 280ms ease,
+            transform 620ms cubic-bezier(0.2, 1.4, 0.4, 1),
+            visibility 0ms linear 620ms;
+          will-change: opacity, transform;
           z-index: 1000;
         }
 
         .chat-container.position-left {
           right: auto;
           left: 24px;
+          transform-origin: bottom left;
         }
 
         .chat-container.open {
-          display: flex;
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          transform: translateY(0) scale(1);
+          transition: opacity 220ms ease,
+            transform 720ms cubic-bezier(0.16, 1.6, 0.3, 1);
+          animation: chat-pop 420ms ease-out 620ms both;
+        }
+
+        @keyframes chat-pop {
+          0% { transform: translateY(0) scale(1); }
+          60% { transform: translateY(0) scale(1.02); }
+          100% { transform: translateY(0) scale(1); }
         }
 
         .chat-shell {
@@ -1601,7 +1623,6 @@ export default function Chatbot({ config: userConfig }) {
             border-radius: 0;
             box-shadow: none;
             overflow-y: auto;
-            transform: none;
           }
 
           .chat-container.position-left {
