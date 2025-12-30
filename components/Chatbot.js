@@ -631,7 +631,7 @@ export default function Chatbot({ config: userConfig }) {
     if (!phone) errors.phone = "Phone number is required.";
     else if (!phoneOk) errors.phone = "Enter a valid phone number.";
     if (!service) errors.service = "Select a service.";
-    if (!note) errors.note = "Short note is required.";
+    if (!note) errors.note = "We need a detailed message from you about the service you need.";
 
     return errors;
   }, []);
@@ -720,18 +720,16 @@ export default function Chatbot({ config: userConfig }) {
   if (!mounted) return null;
 
   const containerStyle = {
-    display: open ? "flex" : "none",
     ...(isMobile
       ? {
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          maxWidth: "100vw",
-          maxHeight: "100dvh",
-          borderRadius: 0,
+          right: 16,
+          bottom: 16,
+          left: 16,
+          width: "calc(100% - 32px)",
+          height: "80vh",
+          maxWidth: "420px",
+          maxHeight: "80vh",
+          borderRadius: 24,
           boxShadow: "none",
           overflowY: "auto",
         }
@@ -1053,15 +1051,15 @@ export default function Chatbot({ config: userConfig }) {
                   <option value="">Select a service</option>
                   <option value="PPC">PPC</option>
                   <option value="SEO">SEO</option>
-                  <option value="App Development">App Development</option>
-                  <option value="Web Design">Web Design</option>
+                  <option value="Custom Web Development">Custom Web Development</option>
+                  <option value="E-commerce Web Development">E-commerce Web Development</option>
                 </select>
                 {(expertSubmitAttempted || expertTouched.service) && expertErrors.service && (
                   <span className="expert-field-error">{expertErrors.service}</span>
                 )}
               </label>
               <label className="expert-field">
-                Short note
+                How Can We Help?
                 <textarea
                   rows={3}
                   value={expertForm.note}
@@ -1112,7 +1110,7 @@ export default function Chatbot({ config: userConfig }) {
           bottom: 24px;
           right: 24px;
           width: 420px;
-          height: 640px;
+          height: 560px;
           border-radius: 28px;
           background: radial-gradient(circle at top right, rgba(124, 110, 255, 0.35), transparent 40%), var(--chat-surface);
           border: 1px solid var(--chat-border);
@@ -1120,16 +1118,13 @@ export default function Chatbot({ config: userConfig }) {
           overflow-y: auto;
           overflow-x: hidden;
           display: flex;
-          opacity: 0;
+          z-index: 1000;
           visibility: hidden;
           pointer-events: none;
-          transform: translate(16px, 16px) scale(0.6);
+          opacity: 0;
+          transform: translateY(10px) scale(0.98);
           transform-origin: bottom right;
-          transition: opacity 280ms ease,
-            transform 620ms cubic-bezier(0.2, 1.4, 0.4, 1),
-            visibility 0ms linear 620ms;
           will-change: opacity, transform;
-          z-index: 1000;
         }
 
         .chat-container.position-left {
@@ -1139,19 +1134,11 @@ export default function Chatbot({ config: userConfig }) {
         }
 
         .chat-container.open {
-          opacity: 1;
           visibility: visible;
           pointer-events: auto;
+          opacity: 1;
           transform: translateY(0) scale(1);
-          transition: opacity 220ms ease,
-            transform 720ms cubic-bezier(0.16, 1.6, 0.3, 1);
-          animation: chat-pop 420ms ease-out 620ms both;
-        }
-
-        @keyframes chat-pop {
-          0% { transform: translateY(0) scale(1); }
-          60% { transform: translateY(0) scale(1.02); }
-          100% { transform: translateY(0) scale(1); }
+          animation: chat-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         .chat-shell {
@@ -1159,7 +1146,7 @@ export default function Chatbot({ config: userConfig }) {
           display: flex;
           flex-direction: column;
           padding: 24px;
-          gap: 16px;
+          gap: 12px;
           background: rgba(8, 12, 30, 0.65);
           backdrop-filter: blur(18px);
           min-height: 100%;
@@ -1248,19 +1235,19 @@ export default function Chatbot({ config: userConfig }) {
           background: linear-gradient(135deg, rgba(76, 70, 247, 0.14), rgba(122, 92, 255, 0.05));
           border: 1px solid rgba(124, 110, 255, 0.3);
           border-radius: 18px;
-          padding: 18px 20px;
+          padding: 12px 14px;
         }
 
         .hero-title {
           margin: 0 0 6px 0;
-          font-size: 20px;
+          font-size: 16px;
           font-weight: 600;
           color: #ffffff;
         }
 
         .hero-subtitle {
           margin: 0;
-          font-size: 14px;
+          font-size: 12px;
           color: rgba(228, 231, 255, 0.75);
         }
 
@@ -1332,6 +1319,12 @@ export default function Chatbot({ config: userConfig }) {
           40% { opacity: 1; }
         }
 
+        @keyframes chat-pop {
+          0% { opacity: 0; transform: translateY(12px) scale(0.94); }
+          60% { opacity: 1; transform: translateY(-2px) scale(1.02); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .message-actions {
           display: flex;
           flex-wrap: wrap;
@@ -1358,16 +1351,16 @@ export default function Chatbot({ config: userConfig }) {
         .quick-replies {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px;
+          gap: 8px;
         }
 
         .quick-reply {
           border: 1px solid rgba(255, 255, 255, 0.12);
           background: rgba(255, 255, 255, 0.02);
-          border-radius: 14px;
-          padding: 10px 12px;
+          border-radius: 12px;
+          padding: 8px 10px;
           color: rgba(228, 231, 255, 0.86);
-          font-size: 13px;
+          font-size: 12px;
           text-align: left;
           cursor: pointer;
           transition: background 0.2s ease, transform 0.2s ease, border 0.2s ease;
@@ -1594,7 +1587,7 @@ export default function Chatbot({ config: userConfig }) {
 
         .expert-field-error {
           font-size: 11px;
-          color: rgba(228, 231, 255, 0.75);
+          color: #ff8f8f;
         }
 
         .expert-form-submit {
@@ -1614,13 +1607,15 @@ export default function Chatbot({ config: userConfig }) {
 
         @media (max-width: 640px) {
           .chat-container {
-            inset: 0;
-            margin: 0;
-            width: 100%;
-            max-width: 100vw;
-            height: 100%;
-            max-height: 100dvh;
-            border-radius: 0;
+            inset: auto;
+            right: 16px;
+            bottom: 16px;
+            left: 16px;
+            width: calc(100% - 32px);
+            max-width: 420px;
+            height: 80vh;
+            max-height: 80vh;
+            border-radius: 24px;
             box-shadow: none;
             overflow-y: auto;
           }
