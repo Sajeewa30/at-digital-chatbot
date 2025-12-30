@@ -220,6 +220,7 @@ export default function Chatbot({ config: userConfig }) {
   const sendAudioRef = useRef(null);
   const receiveAudioRef = useRef(null);
   const lastSoundAtRef = useRef(0);
+  const audioUnlockedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -232,6 +233,27 @@ export default function Chatbot({ config: userConfig }) {
     sendAudioRef.current = send;
     receiveAudioRef.current = receive;
   }, [sendVolume, receiveVolume]);
+
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    const audios = [sendAudioRef.current, receiveAudioRef.current].filter(Boolean);
+    if (!audios.length) return;
+    audioUnlockedRef.current = true;
+    audios.forEach((audio) => {
+      try {
+        audio.muted = true;
+        const res = audio.play();
+        if (res && typeof res.catch === "function") {
+          res.catch(() => {});
+        }
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+      } catch {
+        // ignore unlock failures
+      }
+    });
+  }, []);
 
   const playSound = useCallback((type) => {
     if (typeof window === "undefined") return;
@@ -514,6 +536,7 @@ export default function Chatbot({ config: userConfig }) {
     if (!message || !sessionId || sending) return;
     // Show what the user typed (with punctuation) in UI
     addMessage("user", display);
+    unlockAudio();
     playSound("send");
     setInput("");
     setSending(true);
@@ -548,7 +571,7 @@ export default function Chatbot({ config: userConfig }) {
     } finally {
       // no-op: sending already handled above
     }
-  }, [addMessage, config.webhook.route, input, sending, sessionId, typeOutBotMessage, playSound]);
+  }, [addMessage, config.webhook.route, input, sending, sessionId, typeOutBotMessage, playSound, unlockAudio]);
 
   // Send a pre-defined quick message using the same webhook flow
   const sendQuickMessage = useCallback(
@@ -558,6 +581,7 @@ export default function Chatbot({ config: userConfig }) {
       if (!message || !sessionId || sending) return;
       // Show the display text in UI
       addMessage("user", display);
+      unlockAudio();
       playSound("send");
       setSending(true);
 
@@ -591,7 +615,7 @@ export default function Chatbot({ config: userConfig }) {
         // no-op: sending already handled above
       }
     },
-    [addMessage, config.webhook.route, normalizeInput, sending, sessionId, typeOutBotMessage, playSound]
+    [addMessage, config.webhook.route, normalizeInput, sending, sessionId, typeOutBotMessage, playSound, unlockAudio]
   );
 
   const resetExpertForm = useCallback(() => {
@@ -1081,7 +1105,10 @@ export default function Chatbot({ config: userConfig }) {
       <button
         className={`chat-toggle${positionLeft ? " position-left" : ""}`}
         ref={toggleRef}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          unlockAudio();
+          setOpen((v) => !v);
+        }}
         aria-expanded={open}
         aria-label="Open chat"
       >
